@@ -17,7 +17,7 @@ type Ban struct {
 	CreatedAt time.Time   `json:"created_at"`
 	ExpiresAt time.Time   `json:"expires_at"`
 	Reason    string      `json:"reason"`
-	AdminId   admin.Admin `json:"admin"`
+	Admin     admin.Admin `json:"adminid"`
 	ServerId  uint        `json:"serverid"`
 	Comment   string      `json:"comment"`
 	Extra     string      `json:"extra"`
@@ -31,52 +31,64 @@ func New(name string, ip string, authId uint, expiresAt time.Duration, reason st
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(expiresAt),
 		Reason:    reason,
-		AdminId:   adminId,
+		Admin:     adminId,
 		ServerId:  serverId,
 		Comment:   comment,
 		Extra:     extra,
 	}
 }
 
-func Find(id uint) (*Ban, error) {
+func (ban *Ban) Save(ctx context.Context) error {
+	_, err := database.Exec(ctx, "INSERT INTO bans (name, ip, auth_id, created_at, expires_at, reason, admin_id, server_id, comment, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ban.Name, ban.Ip, ban.AuthId, ban.CreatedAt, ban.ExpiresAt, ban.Reason, ban.Admin.Id, ban.ServerId, ban.Comment, ban.Extra)
+	return err
+}
+
+func Find(ctx context.Context, id uint) (*Ban, error) {
 	var ban Ban
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	db := database.GetDatabase()
-	res := db.Collection("bans").FindOne(ctx, &Ban{BanId: id})
-	if res == nil {
+	row, err := database.QueryRow(ctx, "SELECT * FROM bans WHERE ban_id = ?", id)
+	if err != nil || row == nil {
 		return nil, errors.New("Ban not found")
 	}
-	res.Decode(&ban)
+	var adminid uint
+	row.Scan(&ban.BanId, &ban.Name, &ban.Ip, &ban.AuthId, &ban.CreatedAt, &ban.ExpiresAt, &ban.Reason, &adminid, &ban.ServerId, &ban.Comment, &ban.Extra)
+	admin, _ := admin.Find(ctx, adminid)
+	ban.Admin = *admin
 	return &ban, nil
 }
 
-func FindByAuthId(authid uint) (*[]Ban, error) {
-	var ban []Ban
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	db := database.GetDatabase()
-	cur, err := db.Collection("bans").Find(ctx, &Ban{AuthId: authid})
-	if cur == nil || err != nil {
-		return nil, err
+func FindByAuthId(ctx context.Context, authid uint) (*[]Ban, error) {
+	var bans []Ban
+	rows, err := database.Query(ctx, "SELECT * FROM bans WHERE player_id = ?", authid)
+	if err != nil {
+		return nil, errors.New("Ban not found")
 	}
-	if err = cur.All(ctx, &ban); err != nil {
-		return nil, err
+	defer rows.Close()
+	for rows.Next() {
+		var ban Ban
+		var adminid uint
+		rows.Scan(&ban.BanId, &ban.Name, &ban.Ip, &ban.AuthId, &ban.CreatedAt, &ban.ExpiresAt, &ban.Reason, &adminid, &ban.ServerId, &ban.Comment, &ban.Extra)
+		admin, _ := admin.Find(ctx, adminid)
+		ban.Admin = *admin
+		bans = append(bans, ban)
 	}
-	return &ban, nil
+	return &bans, nil
 }
 
-func FindByServer(serverId uint) (*[]Ban, error) {
-	var ban []Ban
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	db := database.GetDatabase()
-	cur, err := db.Collection("bans").Find(ctx, &Ban{ServerId: serverId})
-	if cur == nil || err != nil {
-		return nil, err
+func FindByServer(ctx context.Context, serverId uint) (*[]Ban, error) {
+	var bans []Ban
+	rows, err := database.Query(ctx, "SELECT * FROM bans WHERE server_id = ?", serverId)
+	if err != nil {
+		return nil, errors.New("Ban not found")
 	}
-	if err = cur.All(ctx, &ban); err != nil {
-		return nil, err
+	defer rows.Close()
+	for rows.Next() {
+		var ban Ban
+		var adminid uint
+		rows.Scan(&ban.BanId, &ban.Name, &ban.Ip, &ban.AuthId, &ban.CreatedAt, &ban.ExpiresAt, &ban.Reason, &adminid, &ban.ServerId, &ban.Comment, &ban.Extra)
+		admin, _ := admin.Find(ctx, adminid)
+		ban.Admin = *admin
+		bans = append(bans, ban)
 	}
-	return &ban, nil
+
+	return &bans, nil
 }

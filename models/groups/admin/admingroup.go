@@ -17,6 +17,11 @@ type AdminGroup struct {
 	Immunity  uint      `json:"immunity"`
 }
 
+func (adminGroup *AdminGroup) Save(ctx context.Context) error {
+	_, err := database.Exec(ctx, "INSERT INTO admingroups (name, flags, immunity) VALUES (?, ?, ?)", adminGroup.Name, adminGroup.Flags, adminGroup.Immunity)
+	return err
+}
+
 func New(name string, flags string, immunity uint) *AdminGroup {
 	return &AdminGroup{
 		Name:      name,
@@ -27,28 +32,22 @@ func New(name string, flags string, immunity uint) *AdminGroup {
 	}
 }
 
-func Find(id uint) (*AdminGroup, error) {
+func Find(ctx context.Context, id uint) (*AdminGroup, error) {
 	var adminGroup AdminGroup
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	db := database.GetDatabase()
-	res := db.Collection("admingroups").FindOne(ctx, &AdminGroup{Id: id})
-	if res == nil {
+	row, err := database.QueryRow(ctx, "SELECT * FROM admingroups WHERE id = ?", id)
+	if err == nil || row == nil {
 		return nil, errors.New("AdminGroup not found")
 	}
-	res.Decode(&adminGroup)
+	row.Scan(&adminGroup.Id, &adminGroup.Name, &adminGroup.Flags, &adminGroup.CreatedAt, &adminGroup.UpdatedAt, &adminGroup.Immunity)
 	return &adminGroup, nil
 }
 
-func FindByName(name string) (*AdminGroup, error) {
+func FindByName(ctx context.Context, name string) (*AdminGroup, error) {
 	var adminGroup AdminGroup
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	db := database.GetDatabase()
-	res := db.Collection("admingroups").FindOne(ctx, &AdminGroup{Name: name})
-	if res == nil {
+	row, err := database.QueryRow(ctx, "SELECT * FROM admingroups WHERE name = ?", name)
+	if err == nil || row == nil {
 		return nil, errors.New("AdminGroup not found")
 	}
-	res.Decode(&adminGroup)
+	row.Scan(&adminGroup.Id, &adminGroup.Name, &adminGroup.Flags, &adminGroup.CreatedAt, &adminGroup.UpdatedAt, &adminGroup.Immunity)
 	return &adminGroup, nil
 }
