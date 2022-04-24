@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"os"
 	"plugin"
+	"strconv"
 
 	"github.com/asaskevich/EventBus"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"insanitygaming.net/bans/src/gb/controllers/admin"
 	"insanitygaming.net/bans/src/gb/services/addons"
 	"insanitygaming.net/bans/src/gb/services/database"
 	"insanitygaming.net/bans/src/gb/services/logger"
@@ -132,4 +135,37 @@ func main() {
 
 	rows, err := database.Query(background, "SELECT * FROM gb_bans")
 	fmt.Print(rows, err)
+
+	r := gin.Default()
+
+	r.GET("/admin/:id", func(c *gin.Context) {
+		id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 64)
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": gin.H{
+					"message": "Invalid ID",
+				},
+			})
+		}
+		adm, err := admin.Find(background, uint(id))
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": gin.H{
+					"message": "Invalid ID",
+				},
+			})
+			return
+		}
+		c.JSON(200, gin.H{
+			"data": adm,
+		})
+	})
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+
+	r.Run(":8080")
 }
