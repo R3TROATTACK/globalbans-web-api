@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"insanitygaming.net/bans/services/logger"
+	"insanitygaming.net/bans/src/gb/services/logger"
 )
 
 var db *sql.DB
@@ -42,41 +42,49 @@ func Close() {
 	logger.Logger().Debug("Closed database connection")
 }
 
+//TODO: Extract setup to a separate app or something
+//		I just dislike having a flag to toggle this just doesnt
+//		seem like the correct place to do this
+
 func RunSetup() {
 	logger.Logger().Info("Running database setup")
 
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS gb_admins (
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS gb_admin (
 		admin_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
 		name VARCHAR(255) NOT NULL,
 		password VARCHAR(255) NOT NULL,
 		email VARCHAR(255) NOT NULL,
+		auths VARCHAR(255) DEFAULT '{}',
 		created_at DATETIME NOT NULL,
 		updated_at DATETIME NOT NULL,
-		groups VARCHAR(32) NOT NULL DEFAULT '',
+		adm_groups VARCHAR(32) NOT NULL DEFAULT '',
+		web_groups VARCHAR(32) NOT NULL DEFAULT '',
+		svr_groups VARCHAR(32) NOT NULL DEFAULT '',
 		flags VARCHAR(32) NOT NULL DEFAULT '',
 		immunity INT UNSIGNED NOT NULL DEFAULT 0
 	);`)
 	if err != nil {
-		logger.Logger().Error("Error setting up gb_admins: ", err)
+		logger.Logger().Error("Error setting up gb_admin: ", err)
 		return
 	}
 	logger.Logger().Info("Admins database was successfully created")
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_groups (
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_group (
 		group_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		name VARCHAR(64) NOT NULL UNIQUE,
 		flags INT NOT NULL DEFAULT 0,
-		group_type INT UNSIGNED NOT NULL,
-		immunity INT UNSIGNED NOT NULL DEFAULT 0
+		immunity INT UNSIGNED NOT NULL DEFAULT 0,
+		group_type INT UNSIGNED DEFAULT 0
 	);`)
 	if err != nil {
-		logger.Logger().Error("Error setting up gb_groups: ", err)
+		logger.Logger().Error("Error setting up gb_group: ", err)
 		return
 	}
 	logger.Logger().Info("Groups database was successfully created")
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_servers (
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_server (
 		server_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		app_id INT UNSIGNED NOT NULL,
 		ip VARCHAR(64) NOT NULL,
 		port INT UNSIGNED NOT NULL,
 		immunity INT UNSIGNED NOT NULL DEFAULT 0,
@@ -88,13 +96,13 @@ func RunSetup() {
 	}
 	logger.Logger().Info("Servers database was successfully created")
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_server_groups (
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_server_group (
 		group_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		name VARCHAR(64) NOT NULL UNIQUE,
 		servers VARCHAR(32) NOT NULL DEFAULT ''
 	);`)
 	if err != nil {
-		logger.Logger().Error("Error setting up gb_server_groups: ", err)
+		logger.Logger().Error("Error setting up gb_server_group: ", err)
 		return
 	}
 	logger.Logger().Info("Server Groups database was successfully created")
@@ -102,6 +110,7 @@ func RunSetup() {
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_bans (
 		ban_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		admin_id BIGINT UNSIGNED NOT NULL,
+		ban_tyoe INT UNSIGNED NOT NULL,
 		server_id INT UNSIGNED NOT NULL,
 		player_id BIGINT UNSIGNED NOT NULL,
 		reason VARCHAR(255) NOT NULL,
@@ -114,7 +123,23 @@ func RunSetup() {
 		logger.Logger().Error("Error setting up gb_bans: ", err)
 		return
 	}
-	//TODO: Add in application sql
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_application (
+		application_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		image VARCHAR(255) NULL
+	);`)
+	if err != nil {
+		logger.Logger().Error("Error setting up gb_application: ", err)
+		return
+	}
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_ban_type (
+		ban_type_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+		name VARCHAR(255) NOT NULL
+	);`)
+	if err != nil {
+		logger.Logger().Error("Error setting up gb_ban_type: ", err)
+		return
+	}
 	logger.Logger().Info("Bans database was successfully created")
 	logger.Logger().Info("Database setup was successful")
 }
