@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"insanitygaming.net/bans/src/gb/controllers/admin"
+	adminmodel "insanitygaming.net/bans/src/gb/models/admin"
 	"insanitygaming.net/bans/src/gb/services/addons"
 	"insanitygaming.net/bans/src/gb/services/database"
 	"insanitygaming.net/bans/src/gb/services/logger"
@@ -149,6 +150,25 @@ func main() {
 		}
 		adm, err := admin.Find(background, uint(id))
 		if err != nil {
+			c.JSON(400, gin.H{
+				"error": gin.H{
+					"message": "Invalid ID",
+				},
+			})
+			return
+		}
+		bus.Publish("get:admin:id", adm)
+		c.JSON(200, gin.H{
+			"data": adm,
+		})
+	})
+
+	r.GET("/admin/:app/:id", func(c *gin.Context) {
+		app := c.Params.ByName("app")
+		id := c.Params.ByName("id")
+		var adm *adminmodel.Admin
+		bus.Publish(fmt.Sprintf("get:admin:%s", app), id, &adm)
+		if adm == nil {
 			c.JSON(400, gin.H{
 				"error": gin.H{
 					"message": "Invalid ID",
