@@ -1,0 +1,1 @@
+# Global Bans Web API
