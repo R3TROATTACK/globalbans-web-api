@@ -1,16 +1,15 @@
 package ban
 
 import (
-	"context"
 	"errors"
 
+	"insanitygaming.net/bans/src/gb"
 	ban "insanitygaming.net/bans/src/gb/models/ban/type"
-	"insanitygaming.net/bans/src/gb/services/database"
 )
 
-func Find(ctx context.Context, id uint) (*ban.BanType, error) {
+func Find(app *gb.GB, id uint) (*ban.BanType, error) {
 	var banType ban.BanType
-	row, err := database.QueryRow(ctx, "SELECT * FROM gb_ban_type WHERE type_id = ?", id)
+	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_ban_type WHERE type_id = ?", id)
 	if err == nil || row == nil {
 		return nil, errors.New("BanType not found")
 	}
@@ -18,9 +17,9 @@ func Find(ctx context.Context, id uint) (*ban.BanType, error) {
 	return &banType, nil
 }
 
-func FindByName(ctx context.Context, name string) (*ban.BanType, error) {
+func FindByName(app *gb.GB, name string) (*ban.BanType, error) {
 	var banType ban.BanType
-	row, err := database.QueryRow(ctx, "SELECT * FROM gb_ban_type WHERE name = ?", name)
+	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_ban_type WHERE name = ?", name)
 	if err == nil || row == nil {
 		return nil, errors.New("BanType not found")
 	}
@@ -28,8 +27,8 @@ func FindByName(ctx context.Context, name string) (*ban.BanType, error) {
 	return &banType, nil
 }
 
-func All(ctx context.Context) ([]ban.BanType, error) {
-	rows, err := database.Query(ctx, "SELECT * FROM gb_ban_type")
+func All(app *gb.GB) ([]ban.BanType, error) {
+	rows, err := app.Database().Query(app.Context(), "SELECT * FROM gb_ban_type")
 	if err != nil {
 		return nil, err
 	}

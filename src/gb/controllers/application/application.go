@@ -1,16 +1,15 @@
 package application
 
 import (
-	"context"
 	"errors"
 
-	app "insanitygaming.net/bans/src/gb/models/application"
-	"insanitygaming.net/bans/src/gb/services/database"
+	"insanitygaming.net/bans/src/gb"
+	model "insanitygaming.net/bans/src/gb/models/application"
 )
 
-func Find(ctx context.Context, id uint) (*app.Application, error) {
-	var application app.Application
-	row, err := database.QueryRow(ctx, "SELECT * FROM gb_application WHERE id = ?", id)
+func Find(app *gb.GB, id uint) (*model.Application, error) {
+	var application model.Application
+	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_application WHERE id = ?", id)
 	if err != nil {
 		return nil, errors.New("Application not found")
 	}
@@ -22,9 +21,9 @@ func Find(ctx context.Context, id uint) (*app.Application, error) {
 	return &application, nil
 }
 
-func FindByName(ctx context.Context, name string) (*app.Application, error) {
-	var application app.Application
-	row, err := database.QueryRow(ctx, "SELECT * FROM gb_application WHERE name = ?", name)
+func FindByName(app *gb.GB, name string) (*model.Application, error) {
+	var application model.Application
+	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_application WHERE name = ?", name)
 	if err != nil {
 		return nil, errors.New("Application not found")
 	}

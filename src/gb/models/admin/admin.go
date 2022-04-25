@@ -1,17 +1,16 @@
 package admin
 
 import (
-	"context"
 	"encoding/json"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"insanitygaming.net/bans/src/gb"
 	adm "insanitygaming.net/bans/src/gb/models/groups/admin"
 	"insanitygaming.net/bans/src/gb/models/groups/server"
 	"insanitygaming.net/bans/src/gb/models/groups/web"
-	"insanitygaming.net/bans/src/gb/services/database"
 )
 
 type Admin struct {
@@ -42,7 +41,7 @@ func New(username string, password string, email string, auths map[string]string
 	}
 }
 
-func (admin *Admin) Save(ctx context.Context) error {
+func (admin *Admin) Save(app *gb.GB) error {
 	var admingroups string
 	go func(lst []adm.Group) {
 		for _, group := range lst {
@@ -69,7 +68,7 @@ func (admin *Admin) Save(ctx context.Context) error {
 		return e
 	}
 
-	_, err := database.Exec(ctx, "INSERT INTO gb_admin (name, password, email, auths, flags, servers, created_at, adm_groups, web_groups, svr_groups) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", admin.Username, admin.Password, admin.Email, auths, admin.Flags, admin.Servers, admin.CreatedAt, admingroups, webgroups, servergroups)
+	_, err := app.Database().Exec(app.Context(), "INSERT INTO gb_admin (name, password, email, auths, flags, servers, created_at, adm_groups, web_groups, svr_groups) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", admin.Username, admin.Password, admin.Email, auths, admin.Flags, admin.Servers, admin.CreatedAt, admingroups, webgroups, servergroups)
 	return err
 }
 

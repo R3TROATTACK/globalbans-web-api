@@ -16,8 +16,6 @@ type Registry struct {
 	Addons map[string]*Addon
 }
 
-var registry Registry = Registry{}
-
 func (r *Registry) Register(name string, addon *Addon) {
 	r.Addons[name] = addon
 }
@@ -30,18 +28,7 @@ func (r *Registry) Del(name string) {
 	delete(r.Addons, name)
 }
 
-func Get(name string) *Addon {
-	return registry.Get(name)
-}
-
-func Register(name string, addon *Addon) {
-	registry.Register(name, addon)
-}
-
-func Del(name string) {
-	registry.Del(name)
-}
-
-func GetRegistry() *Registry {
-	return &registry
+func New() *Registry {
+	return &Registry{}
+	//TODO: Move loadAddon code to here
 }

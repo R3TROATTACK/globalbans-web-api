@@ -1,18 +1,17 @@
 package web
 
 import (
-	"context"
 	"errors"
 	"strconv"
 
+	"insanitygaming.net/bans/src/gb"
 	"insanitygaming.net/bans/src/gb/models/groups/web"
-	"insanitygaming.net/bans/src/gb/services/database"
 )
 
-func Find(ctx context.Context, id uint) (*web.Group, error) {
+func Find(app *gb.GB, id uint) (*web.Group, error) {
 	var webGroup web.Group
 
-	rows, err := database.Query(ctx, "SELECT group_id, name, flags, immunity FROM gb_group WHERE group_id = ? AND group_type = 0", strconv.FormatUint(uint64(id), 10))
+	rows, err := app.Database().Query(app.Context(), "SELECT group_id, name, flags, immunity FROM gb_group WHERE group_id = ? AND group_type = 0", strconv.FormatUint(uint64(id), 10))
 	if err != nil {
 		return nil, err
 	}
@@ -24,9 +23,9 @@ func Find(ctx context.Context, id uint) (*web.Group, error) {
 	return &webGroup, nil
 }
 
-func FindByName(ctx context.Context, name string) (*web.Group, error) {
+func FindByName(app *gb.GB, name string) (*web.Group, error) {
 	var webGroup web.Group
-	rows, err := database.Query(ctx, "SELECT group_id, name, flags, immunity FROM gb_group WHERE name = ?", name)
+	rows, err := app.Database().Query(app.Context(), "SELECT group_id, name, flags, immunity FROM gb_group WHERE name = ?", name)
 	if err != nil {
 		return nil, err
 	}

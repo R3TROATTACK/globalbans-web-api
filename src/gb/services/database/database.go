@@ -12,11 +12,18 @@ import (
 	"insanitygaming.net/bans/src/gb/services/logger"
 )
 
-var db *sql.DB
-
 const TIME_OUT time.Duration = 5 * time.Second
 
-func Connect() {
+type Database struct {
+	db *sql.DB
+}
+
+func New() *Database {
+
+	return &Database{}
+}
+
+func (db *Database) Connect() {
 	config := mysql.NewConfig()
 	config.User = os.Getenv("DB_USER")
 	config.Passwd = os.Getenv("DB_PASS")
@@ -27,18 +34,18 @@ func Connect() {
 	config.ParseTime = true
 	var err error
 	fmt.Println(config.FormatDSN())
-	db, err = sql.Open("mysql", config.FormatDSN())
+	db.db, err = sql.Open("mysql", config.FormatDSN())
 	if err != nil {
 		panic(err)
 	}
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(3)
-	db.SetConnMaxLifetime(time.Minute * 5)
+	db.db.SetMaxOpenConns(10)
+	db.db.SetMaxIdleConns(3)
+	db.db.SetConnMaxLifetime(time.Minute * 5)
 	logger.Logger().Info("Connected to database")
 }
 
-func Close() {
-	db.Close()
+func (db *Database) Close() {
+	db.db.Close()
 	logger.Logger().Debug("Closed database connection")
 }
 
@@ -46,10 +53,10 @@ func Close() {
 //		I just dislike having a flag to toggle this just doesnt
 //		seem like the correct place to do this
 
-func RunSetup() {
+func (db *Database) RunSetup(ctx context.Context) {
 	logger.Logger().Info("Running database setup")
 
-	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS gb_admin (
+	_, err := db.Exec(ctx, `CREATE TABLE IF NOT EXISTS gb_admin (
 		admin_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
 		name VARCHAR(255) NOT NULL,
 		password VARCHAR(255) NOT NULL,
@@ -69,7 +76,7 @@ func RunSetup() {
 	}
 	logger.Logger().Info("Admins database was successfully created")
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_group (
+	_, err = db.Exec(ctx, `CREATE TABLE IF NOT EXISTS gb_group (
 		group_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		name VARCHAR(64) NOT NULL UNIQUE,
 		flags INT NOT NULL DEFAULT 0,
@@ -82,7 +89,7 @@ func RunSetup() {
 	}
 	logger.Logger().Info("Groups database was successfully created")
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_server (
+	_, err = db.Exec(ctx, `CREATE TABLE IF NOT EXISTS gb_server (
 		server_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		app_id INT UNSIGNED NOT NULL,
 		ip VARCHAR(64) NOT NULL,
@@ -96,7 +103,7 @@ func RunSetup() {
 	}
 	logger.Logger().Info("Servers database was successfully created")
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_server_group (
+	_, err = db.Exec(ctx, `CREATE TABLE IF NOT EXISTS gb_server_group (
 		group_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		name VARCHAR(64) NOT NULL UNIQUE,
 		servers VARCHAR(32) NOT NULL DEFAULT ''
@@ -107,7 +114,7 @@ func RunSetup() {
 	}
 	logger.Logger().Info("Server Groups database was successfully created")
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_bans (
+	_, err = db.Exec(ctx, `CREATE TABLE IF NOT EXISTS gb_bans (
 		ban_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		admin_id BIGINT UNSIGNED NOT NULL,
 		ban_tyoe INT UNSIGNED NOT NULL,
@@ -123,7 +130,7 @@ func RunSetup() {
 		logger.Logger().Error("Error setting up gb_bans: ", err)
 		return
 	}
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_application (
+	_, err = db.Exec(ctx, `CREATE TABLE IF NOT EXISTS gb_application (
 		application_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		name VARCHAR(255) NOT NULL,
 		image VARCHAR(255) NULL
@@ -132,7 +139,7 @@ func RunSetup() {
 		logger.Logger().Error("Error setting up gb_application: ", err)
 		return
 	}
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS gb_ban_type (
+	_, err = db.Exec(ctx, `CREATE TABLE IF NOT EXISTS gb_ban_type (
 		ban_type_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 		name VARCHAR(255) NOT NULL
 	);`)
@@ -144,9 +151,9 @@ func RunSetup() {
 	logger.Logger().Info("Database setup was successful")
 }
 
-func QueryRow(background context.Context, query string, args ...interface{}) (*sql.Row, error) {
+func (db *Database) QueryRow(background context.Context, query string, args ...interface{}) (*sql.Row, error) {
 	ctx, cancel := context.WithTimeout(background, time.Second*TIME_OUT)
-	row := db.QueryRowContext(ctx, query, args...)
+	row := db.db.QueryRowContext(ctx, query, args...)
 	defer func() {
 		logger.Logger().Warnf("Query took too long to execute\nQuery:%s\nArgs: %v", query, args)
 		cancel()
@@ -164,9 +171,9 @@ func QueryRow(background context.Context, query string, args ...interface{}) (*s
 	}
 }
 
-func Query(background context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+func (db *Database) Query(background context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	ctx, cancel := context.WithTimeout(background, time.Second*TIME_OUT)
-	rows, err := db.QueryContext(ctx, query, args...)
+	rows, err := db.db.QueryContext(ctx, query, args...)
 	defer func() {
 		logger.Logger().Warnf("Query took too long to execute\nQuery:%s\nArgs: %v", query, args)
 		cancel()
@@ -184,9 +191,9 @@ func Query(background context.Context, query string, args ...interface{}) (*sql.
 	}
 }
 
-func Exec(background context.Context, query string, args ...interface{}) (sql.Result, error) {
+func (db *Database) Exec(background context.Context, query string, args ...interface{}) (sql.Result, error) {
 	ctx, cancel := context.WithTimeout(background, time.Second*TIME_OUT)
-	result, err := db.ExecContext(ctx, query, args...)
+	result, err := db.db.ExecContext(ctx, query, args...)
 	defer func() {
 		logger.Logger().Warnf("Query took too long to execute\nQuery:%s\nArgs: %v", query, args)
 		cancel()

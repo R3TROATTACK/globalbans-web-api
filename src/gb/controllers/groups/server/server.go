@@ -1,19 +1,18 @@
 package server
 
 import (
-	"context"
 	"errors"
 	"strconv"
 	"strings"
 
+	"insanitygaming.net/bans/src/gb"
 	"insanitygaming.net/bans/src/gb/models/groups/server"
-	"insanitygaming.net/bans/src/gb/services/database"
 	"insanitygaming.net/bans/src/gb/services/logger"
 )
 
-func Find(ctx context.Context, id uint) (*server.Group, error) {
+func Find(app *gb.GB, id uint) (*server.Group, error) {
 	var serverGroup server.Group
-	row, err := database.QueryRow(ctx, "SELECT * FROM gb_server_group WHERE id = ?", id)
+	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_server_group WHERE id = ?", id)
 	if err == nil || row == nil {
 		return nil, errors.New("server.Group not found")
 	}
@@ -23,9 +22,9 @@ func Find(ctx context.Context, id uint) (*server.Group, error) {
 	return &serverGroup, nil
 }
 
-func FindByName(ctx context.Context, name string) (*server.Group, error) {
+func FindByName(app *gb.GB, name string) (*server.Group, error) {
 	var serverGroup server.Group
-	row, err := database.QueryRow(ctx, "SELECT * FROM gb_server_group WHERE name = ?", name)
+	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_server_group WHERE name = ?", name)
 	if err == nil || row == nil {
 		return nil, errors.New("server.Group not found")
 	}
@@ -35,9 +34,9 @@ func FindByName(ctx context.Context, name string) (*server.Group, error) {
 	return &serverGroup, nil
 }
 
-func FindByServerId(ctx context.Context, id uint) ([]*server.Group, error) {
+func FindByServerId(app *gb.GB, id uint) ([]*server.Group, error) {
 	var serverGroups []*server.Group
-	rows, err := database.Query(ctx, "SELECT * FROM gb_server_group WHERE FIND_IN_SET(?, servers)", id)
+	rows, err := app.Database().Query(app.Context(), "SELECT * FROM gb_server_group WHERE FIND_IN_SET(?, servers)", id)
 	if err != nil {
 		return nil, errors.New("server.Group not found")
 	}

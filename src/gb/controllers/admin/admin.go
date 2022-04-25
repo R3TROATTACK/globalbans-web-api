@@ -1,11 +1,14 @@
 package admin
 
+//TODO: Implement organization for http methods
+//		So that when publishing events its easier to know which to use
+
 import (
-	"context"
 	"errors"
 	"strconv"
 	"strings"
 
+	"insanitygaming.net/bans/src/gb"
 	admcontrol "insanitygaming.net/bans/src/gb/controllers/groups/admin"
 	servercontrol "insanitygaming.net/bans/src/gb/controllers/groups/server"
 	webcontrol "insanitygaming.net/bans/src/gb/controllers/groups/web"
@@ -13,45 +16,44 @@ import (
 	adm "insanitygaming.net/bans/src/gb/models/groups/admin"
 	"insanitygaming.net/bans/src/gb/models/groups/server"
 	"insanitygaming.net/bans/src/gb/models/groups/web"
-	"insanitygaming.net/bans/src/gb/services/database"
 )
 
-func Find(ctx context.Context, id uint) (*admin.Admin, error) {
+func Find(app *gb.GB, id uint) (*admin.Admin, error) {
 	var admin admin.Admin
-	row, err := database.QueryRow(ctx, "SELECT admin_id, name, password, email, created_at, adm_groups, web_groups, svr_groups, flags, immunity FROM gb_admin WHERE id = ?", id)
+	row, err := app.Database().QueryRow(app.Context(), "SELECT admin_id, name, email, created_at, adm_groups, web_groups, svr_groups, immunity FROM gb_admin WHERE id = ?", id)
 	if err != nil {
 		return nil, errors.New("Admin not found")
 	}
 	var admgroups, webgroups, svrgroups string
 
-	row.Scan(&admin.Id, &admin.Username, &admin.Password, &admin.Email, &admin.CreatedAt, &admgroups, &webgroups, &svrgroups, &admin.Flags, &admin.Immunity)
+	row.Scan(&admin.Id, &admin.Username, &admin.Email, &admin.CreatedAt, &admgroups, &webgroups, &svrgroups, &admin.Immunity)
 
-	admin.AdminGroup = parseAdminGropsFromList(ctx, parseIntsFromString(admgroups))
-	admin.WebGroups = parseWebGroupsFromList(ctx, parseIntsFromString(webgroups))
-	admin.ServerGroups = parseServerGroupsFromList(ctx, parseIntsFromString(svrgroups))
+	admin.AdminGroup = parseAdminGropsFromList(app, parseIntsFromString(admgroups))
+	admin.WebGroups = parseWebGroupsFromList(app, parseIntsFromString(webgroups))
+	admin.ServerGroups = parseServerGroupsFromList(app, parseIntsFromString(svrgroups))
 
 	return &admin, nil
 }
 
-func FindByName(ctx context.Context, username string) (*admin.Admin, error) {
+func FindByName(app *gb.GB, username string) (*admin.Admin, error) {
 	var admin admin.Admin
-	row, err := database.QueryRow(ctx, "SELECT admin_id, name, password, email, auths, created_at, groups, flags, immunity FROM gb_admin WHERE username = ?", username)
+	row, err := app.Database().QueryRow(app.Context(), "SELECT admin_id, name, email, auths, created_at, adm_groups, web_groups, svr_groups, immunity FROM gb_admin WHERE username = ?", username)
 	if err != nil {
 		return nil, errors.New("Admin not found")
 	}
 	var admgroups, webgroups, svrgroups string
 
-	row.Scan(&admin.Id, &admin.Username, &admin.Password, &admin.Email, &admin.CreatedAt, &admgroups, &webgroups, &svrgroups, &admin.Flags, &admin.Immunity)
+	row.Scan(&admin.Id, &admin.Username, &admin.Email, &admin.CreatedAt, &admgroups, &webgroups, &svrgroups, &admin.Immunity)
 
-	admin.AdminGroup = parseAdminGropsFromList(ctx, parseIntsFromString(admgroups))
-	admin.WebGroups = parseWebGroupsFromList(ctx, parseIntsFromString(webgroups))
-	admin.ServerGroups = parseServerGroupsFromList(ctx, parseIntsFromString(svrgroups))
+	admin.AdminGroup = parseAdminGropsFromList(app, parseIntsFromString(admgroups))
+	admin.WebGroups = parseWebGroupsFromList(app, parseIntsFromString(webgroups))
+	admin.ServerGroups = parseServerGroupsFromList(app, parseIntsFromString(svrgroups))
 	return &admin, nil
 }
 
-func FindByServerId(ctx context.Context, id uint) ([]*admin.Admin, error) {
+func FindByServerId(app *gb.GB, id uint) ([]*admin.Admin, error) {
 	var admins []*admin.Admin
-	rows, err := database.Query(ctx, "SELECT * FROM admins WHERE servers = ?", id)
+	rows, err := app.Database().Query(app.Context(), "SELECT admin_id, name, email, auths, created_at, adm_groups, web_groups, svr_groups, immunity FROM gb_admin WHERE FIND_IN_SET(?,servers)", id)
 	if err != nil {
 		return nil, errors.New("Admin not found")
 	}
@@ -60,19 +62,19 @@ func FindByServerId(ctx context.Context, id uint) ([]*admin.Admin, error) {
 
 		var admgroups, webgroups, svrgroups string
 
-		rows.Scan(&admin.Id, &admin.Username, &admin.Password, &admin.Email, &admin.CreatedAt, &admgroups, &webgroups, &svrgroups, &admin.Flags, &admin.Immunity)
+		rows.Scan(&admin.Id, &admin.Username, &admin.Email, &admin.CreatedAt, &admgroups, &webgroups, &svrgroups, &admin.Immunity)
 
-		admin.AdminGroup = parseAdminGropsFromList(ctx, parseIntsFromString(admgroups))
-		admin.WebGroups = parseWebGroupsFromList(ctx, parseIntsFromString(webgroups))
-		admin.ServerGroups = parseServerGroupsFromList(ctx, parseIntsFromString(svrgroups))
+		admin.AdminGroup = parseAdminGropsFromList(app, parseIntsFromString(admgroups))
+		admin.WebGroups = parseWebGroupsFromList(app, parseIntsFromString(webgroups))
+		admin.ServerGroups = parseServerGroupsFromList(app, parseIntsFromString(svrgroups))
 		admins = append(admins, &admin)
 	}
 	return admins, nil
 }
 
-func FindByServerGroup(ctx context.Context, group uint) ([]*admin.Admin, error) {
+func FindByServerGroup(app *gb.GB, group uint) ([]*admin.Admin, error) {
 	var admins []*admin.Admin
-	rows, err := database.Query(ctx, "SELECT * FROM admins WHERE FIND_IN_SET(?, server_groups) = ?", group)
+	rows, err := app.Database().Query(app.Context(), "SELECT admin_id, name, email, auths, created_at, adm_groups, web_groups, svr_groups, immunity FROM gb_admin WHERE FIND_IN_SET(?, server_groups) = ?", group)
 	if err != nil {
 		return nil, errors.New("Admin not found")
 	}
@@ -80,14 +82,24 @@ func FindByServerGroup(ctx context.Context, group uint) ([]*admin.Admin, error) 
 		var admin admin.Admin
 		var admgroups, webgroups, svrgroups string
 
-		rows.Scan(&admin.Id, &admin.Username, &admin.Password, &admin.Email, &admin.CreatedAt, &admgroups, &webgroups, &svrgroups, &admin.Flags, &admin.Immunity)
+		rows.Scan(&admin.Id, &admin.Username, &admin.Email, &admin.CreatedAt, &admgroups, &webgroups, &svrgroups, &admin.Immunity)
 
-		admin.AdminGroup = parseAdminGropsFromList(ctx, parseIntsFromString(admgroups))
-		admin.WebGroups = parseWebGroupsFromList(ctx, parseIntsFromString(webgroups))
-		admin.ServerGroups = parseServerGroupsFromList(ctx, parseIntsFromString(svrgroups))
+		admin.AdminGroup = parseAdminGropsFromList(app, parseIntsFromString(admgroups))
+		admin.WebGroups = parseWebGroupsFromList(app, parseIntsFromString(webgroups))
+		admin.ServerGroups = parseServerGroupsFromList(app, parseIntsFromString(svrgroups))
 		admins = append(admins, &admin)
 	}
 	return admins, nil
+}
+
+func FindByApp(app *gb.GB, service string, id string) (*admin.Admin, error) {
+	var admin *admin.Admin
+	if !app.EventBus().HasCallback("get:admin:app:" + service) {
+		return nil, errors.New("app not found")
+	}
+	app.EventBus().Publish("get:admin:app:"+service, id, &admin)
+	app.EventBus().WaitAsync()
+	return admin, nil
 }
 
 func parseIntsFromString(groups string) []uint {
@@ -102,10 +114,10 @@ func parseIntsFromString(groups string) []uint {
 	return ids
 }
 
-func parseAdminGropsFromList(ctx context.Context, groups []uint) []adm.Group {
+func parseAdminGropsFromList(app *gb.GB, groups []uint) []adm.Group {
 	var adminGroups []adm.Group
 	for _, group := range groups {
-		adminGroup, err := admcontrol.Find(ctx, uint(group))
+		adminGroup, err := admcontrol.Find(app, uint(group))
 		if err != nil {
 			continue
 		}
@@ -114,10 +126,10 @@ func parseAdminGropsFromList(ctx context.Context, groups []uint) []adm.Group {
 	return adminGroups
 }
 
-func parseWebGroupsFromList(ctx context.Context, groups []uint) []web.Group {
+func parseWebGroupsFromList(app *gb.GB, groups []uint) []web.Group {
 	var webGroups []web.Group
 	for _, group := range groups {
-		webGroup, err := webcontrol.Find(ctx, uint(group))
+		webGroup, err := webcontrol.Find(app, uint(group))
 		if err != nil {
 			continue
 		}
@@ -126,10 +138,10 @@ func parseWebGroupsFromList(ctx context.Context, groups []uint) []web.Group {
 	return webGroups
 }
 
-func parseServerGroupsFromList(ctx context.Context, groups []uint) []server.Group {
+func parseServerGroupsFromList(app *gb.GB, groups []uint) []server.Group {
 	var serverGroups []server.Group
 	for _, group := range groups {
-		serverGroup, err := servercontrol.Find(ctx, uint(group))
+		serverGroup, err := servercontrol.Find(app, uint(group))
 		if err != nil {
 			continue
 		}

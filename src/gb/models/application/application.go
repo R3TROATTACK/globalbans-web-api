@@ -1,9 +1,7 @@
 package application
 
 import (
-	"context"
-
-	"insanitygaming.net/bans/src/gb/services/database"
+	"insanitygaming.net/bans/src/gb"
 )
 
 type Application struct {
@@ -12,8 +10,8 @@ type Application struct {
 	Image string `json:"image"`
 }
 
-func (a *Application) Save(ctx context.Context) (bool, error) {
-	_, err := database.Exec(ctx, "INSERT INTO gb_application (name, image) VALUES (?, ?)", a.Name, a.Image)
+func (a *Application) Save(app *gb.GB) (bool, error) {
+	_, err := app.Database().Exec(app.Context(), "INSERT INTO gb_application (name, image) VALUES (?, ?)", a.Name, a.Image)
 	return err == nil, err
 }
 

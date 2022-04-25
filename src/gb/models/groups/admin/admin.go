@@ -1,10 +1,9 @@
 package admin
 
 import (
-	"context"
 	"time"
 
-	"insanitygaming.net/bans/src/gb/services/database"
+	"insanitygaming.net/bans/src/gb"
 )
 
 type Group struct {
@@ -16,8 +15,8 @@ type Group struct {
 	Immunity  uint      `json:"immunity"`
 }
 
-func (adminGroup *Group) Save(ctx context.Context) error {
-	_, err := database.Exec(ctx, "INSERT INTO gb_group (name, flags, immunity, group_type) VALUES (?, ?, ?, 1)", adminGroup.Name, adminGroup.Flags, adminGroup.Immunity)
+func (adminGroup *Group) Save(app *gb.GB) error {
+	_, err := app.Database().Exec(app.Context(), "INSERT INTO gb_group (name, flags, immunity, group_type) VALUES (?, ?, ?, 1)", adminGroup.Name, adminGroup.Flags, adminGroup.Immunity)
 	return err
 }
 
