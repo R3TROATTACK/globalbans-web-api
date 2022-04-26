@@ -1,0 +1,10 @@
+[
+	{
+		"package": "insanitygaming.net/bans/src/gb/controllers/admin",
+		"callback": "getAllAdmins",
+		"path": "/admin",
+		"methods": [
+			"GET"
+		]
+	}
+]

@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
 	"insanitygaming.net/bans/src/gb/services/logger"
 )
@@ -18,9 +19,18 @@ type Database struct {
 	db *sql.DB
 }
 
-func New() *Database {
+var database *Database
 
-	return &Database{}
+func New() *Database {
+	if database == nil {
+		database = &Database{}
+	}
+	return database
+}
+
+func Middleware(c *gin.Context) {
+	c.Set("db", database)
+	c.Next()
 }
 
 func (db *Database) Connect() {

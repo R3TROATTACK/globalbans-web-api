@@ -1,7 +1,10 @@
 package application
 
 import (
-	"insanitygaming.net/bans/src/gb"
+	"context"
+
+	"github.com/gin-gonic/gin"
+	"insanitygaming.net/bans/src/gb/services/database"
 )
 
 type Application struct {
@@ -10,8 +13,9 @@ type Application struct {
 	Image string `json:"image"`
 }
 
-func (a *Application) Save(app *gb.GB) (bool, error) {
-	_, err := app.Database().Exec(app.Context(), "INSERT INTO gb_application (name, image) VALUES (?, ?)", a.Name, a.Image)
+func (a *Application) Save(app *gin.Context) (bool, error) {
+	database := database.New()
+	_, err := database.Exec(context.Background(), "INSERT INTO gb_application (name, image) VALUES (?, ?)", a.Name, a.Image)
 	return err == nil, err
 }
 

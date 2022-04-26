@@ -1,6 +1,11 @@
 package ban
 
-import "insanitygaming.net/bans/src/gb"
+import (
+	"context"
+
+	"github.com/gin-gonic/gin"
+	"insanitygaming.net/bans/src/gb/services/database"
+)
 
 type BanType struct {
 	TypeId uint   `json:"type_id"`
@@ -13,7 +18,8 @@ func New(name string) *BanType {
 	}
 }
 
-func (b *BanType) Save(app *gb.GB) error {
-	_, err := app.Database().Exec(app.Context(), "INSERT INTO gb_ban_type (name) VALUES (?)", b.Name)
+func (b *BanType) Save(app *gin.Context) error {
+	database := database.New()
+	_, err := database.Exec(context.Background(), "INSERT INTO gb_ban_type (name) VALUES (?)", b.Name)
 	return err
 }

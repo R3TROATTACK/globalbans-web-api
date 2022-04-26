@@ -1,9 +1,11 @@
 package web
 
 import (
+	"context"
 	"time"
 
-	"insanitygaming.net/bans/src/gb"
+	"github.com/gin-gonic/gin"
+	"insanitygaming.net/bans/src/gb/services/database"
 )
 
 type Group struct {
@@ -24,7 +26,8 @@ func New(name string, permissions, flags string, immunity uint) *Group {
 	}
 }
 
-func (webGroup *Group) Save(app *gb.GB) error {
-	_, err := app.Database().Exec(app.Context(), "INSERT INTO gb_group (name, flags, immunity) VALUES (?, ?, ?)", webGroup.Name, webGroup.Flags, webGroup.Immunity)
+func (webGroup *Group) Save(app *gin.Context) error {
+	database := database.New()
+	_, err := database.Exec(context.Background(), "INSERT INTO gb_group (name, flags, immunity) VALUES (?, ?, ?)", webGroup.Name, webGroup.Flags, webGroup.Immunity)
 	return err
 }

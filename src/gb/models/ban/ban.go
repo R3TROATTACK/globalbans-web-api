@@ -1,10 +1,12 @@
 package ban
 
 import (
+	"context"
 	"time"
 
-	"insanitygaming.net/bans/src/gb"
+	"github.com/gin-gonic/gin"
 	"insanitygaming.net/bans/src/gb/models/admin"
+	"insanitygaming.net/bans/src/gb/services/database"
 )
 
 type Ban struct {
@@ -36,7 +38,8 @@ func New(name string, ip string, authId uint, expiresAt time.Duration, reason st
 	}
 }
 
-func (ban *Ban) Save(app *gb.GB) error {
-	_, err := app.Database().Exec(app.Context(), "INSERT INTO gb_bans (name, ip, auth_id, created_at, expires_at, reason, admin_id, server_id, comment, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ban.Name, ban.Ip, ban.AuthId, ban.CreatedAt, ban.ExpiresAt, ban.Reason, ban.Admin.Id, ban.ServerId, ban.Comment, ban.Extra)
+func (ban *Ban) Save(app *gin.Context) error {
+	database := database.New()
+	_, err := database.Exec(context.Background(), "INSERT INTO gb_bans (name, ip, auth_id, created_at, expires_at, reason, admin_id, server_id, comment, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", ban.Name, ban.Ip, ban.AuthId, ban.CreatedAt, ban.ExpiresAt, ban.Reason, ban.Admin.Id, ban.ServerId, ban.Comment, ban.Extra)
 	return err
 }

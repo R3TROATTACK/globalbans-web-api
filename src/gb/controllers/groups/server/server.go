@@ -1,18 +1,21 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
 
-	"insanitygaming.net/bans/src/gb"
+	"github.com/gin-gonic/gin"
 	"insanitygaming.net/bans/src/gb/models/groups/server"
+	"insanitygaming.net/bans/src/gb/services/database"
 	"insanitygaming.net/bans/src/gb/services/logger"
 )
 
-func Find(app *gb.GB, id uint) (*server.Group, error) {
+func Find(app *gin.Context, id uint) (*server.Group, error) {
 	var serverGroup server.Group
-	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_server_group WHERE id = ?", id)
+	database := app.MustGet("database").(*database.Database)
+	row, err := database.QueryRow(context.Background(), "SELECT * FROM gb_server_group WHERE id = ?", id)
 	if err == nil || row == nil {
 		return nil, errors.New("server.Group not found")
 	}
@@ -22,9 +25,10 @@ func Find(app *gb.GB, id uint) (*server.Group, error) {
 	return &serverGroup, nil
 }
 
-func FindByName(app *gb.GB, name string) (*server.Group, error) {
+func FindByName(app *gin.Context, name string) (*server.Group, error) {
 	var serverGroup server.Group
-	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_server_group WHERE name = ?", name)
+	database := app.MustGet("database").(*database.Database)
+	row, err := database.QueryRow(context.Background(), "SELECT * FROM gb_server_group WHERE name = ?", name)
 	if err == nil || row == nil {
 		return nil, errors.New("server.Group not found")
 	}
@@ -34,9 +38,10 @@ func FindByName(app *gb.GB, name string) (*server.Group, error) {
 	return &serverGroup, nil
 }
 
-func FindByServerId(app *gb.GB, id uint) ([]*server.Group, error) {
+func FindByServerId(app *gin.Context, id uint) ([]*server.Group, error) {
 	var serverGroups []*server.Group
-	rows, err := app.Database().Query(app.Context(), "SELECT * FROM gb_server_group WHERE FIND_IN_SET(?, servers)", id)
+	database := app.MustGet("database").(*database.Database)
+	rows, err := database.Query(context.Background(), "SELECT * FROM gb_server_group WHERE FIND_IN_SET(?, servers)", id)
 	if err != nil {
 		return nil, errors.New("server.Group not found")
 	}

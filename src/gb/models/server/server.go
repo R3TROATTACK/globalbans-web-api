@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
 	"time"
 
-	"insanitygaming.net/bans/src/gb"
+	"github.com/gin-gonic/gin"
 	app "insanitygaming.net/bans/src/gb/models/application"
+	"insanitygaming.net/bans/src/gb/services/database"
 )
 
 type Server struct {
@@ -31,7 +33,8 @@ func New(name string, ip string, port uint, password string, app app.Application
 	}
 }
 
-func (s *Server) Save(app *gb.GB) error {
-	_, err := app.Database().Exec(app.Context(), "INSERT INTO gb_server (app, name, ip, port, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)", s.App.Id, s.Name, s.Ip, s.Port, s.Password, s.CreatedAt, s.UpdatedAt)
+func (s *Server) Save(app *gin.Context) error {
+	database := database.New()
+	_, err := database.Exec(context.Background(), "INSERT INTO gb_server (app, name, ip, port, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)", s.App.Id, s.Name, s.Ip, s.Port, s.Password, s.CreatedAt, s.UpdatedAt)
 	return err
 }

@@ -1,16 +1,19 @@
 package server
 
 import (
+	"context"
 	"errors"
 
-	"insanitygaming.net/bans/src/gb"
+	"github.com/gin-gonic/gin"
 	"insanitygaming.net/bans/src/gb/controllers/application"
 	"insanitygaming.net/bans/src/gb/models/server"
+	"insanitygaming.net/bans/src/gb/services/database"
 )
 
-func Find(app *gb.GB, id uint) (*server.Server, error) {
+func Find(app *gin.Context, id uint) (*server.Server, error) {
 	var server server.Server
-	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_server WHERE id = ?", id)
+	database := app.MustGet("database").(*database.Database)
+	row, err := database.QueryRow(context.Background(), "SELECT * FROM gb_server WHERE id = ?", id)
 	if err != nil || row == nil {
 		return nil, errors.New("Server not found")
 	}
@@ -21,9 +24,10 @@ func Find(app *gb.GB, id uint) (*server.Server, error) {
 	return &server, nil
 }
 
-func FindByName(app *gb.GB, ip string, port uint) (*server.Server, error) {
+func FindByName(app *gin.Context, ip string, port uint) (*server.Server, error) {
 	var server server.Server
-	row, err := app.Database().QueryRow(app.Context(), "SELECT * FROM gb_server WHERE ip = ? AND port = ?", ip, port)
+	database := app.MustGet("database").(*database.Database)
+	row, err := database.QueryRow(context.Background(), "SELECT * FROM gb_server WHERE ip = ? AND port = ?", ip, port)
 	if err != nil || row == nil {
 		return nil, errors.New("Server not found")
 	}

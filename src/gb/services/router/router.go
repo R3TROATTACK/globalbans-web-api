@@ -21,9 +21,9 @@ func New() *Router {
 	return &Router{r}
 }
 
-func (r *Router) AddRoute(path string, methods []string, cb func(*gin.Context)) {
+func (r *Router) AddRoute(path string, methods []HTTPMethod, cb func(*gin.Context)) {
 	for _, method := range methods {
-		r.router.Handle(method, path, cb)
+		r.router.Handle(string(method), path, cb)
 	}
 }
 

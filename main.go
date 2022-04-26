@@ -6,20 +6,17 @@ import (
 	"fmt"
 	"os"
 	"plugin"
-	"strconv"
 
 	"github.com/asaskevich/EventBus"
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"insanitygaming.net/bans/src/gb/controllers/admin"
 
 	// adminmodel "insanitygaming.net/bans/src/gb/models/admin"
+	"insanitygaming.net/bans/src/gb"
 	"insanitygaming.net/bans/src/gb/services/addons"
-	"insanitygaming.net/bans/src/gb/services/database"
 	"insanitygaming.net/bans/src/gb/services/logger"
 )
 
-func loadAddons(ctx context.Context, bus EventBus.Bus) {
+func loadAddons(app *gb.GB, ctx context.Context, bus EventBus.Bus) {
 	dirs, err := os.ReadDir("src/addons")
 	if err != nil {
 		logger.Logger().Fatal("Error reading addons directory")
@@ -100,7 +97,7 @@ func loadAddons(ctx context.Context, bus EventBus.Bus) {
 
 				runFunc(bus)
 
-				addons.Register(*name.(*string), &addons.Addon{
+				app.Addons().Register(*name.(*string), &addons.Addon{
 					Plugin:      p,
 					Name:        *name.(*string),
 					Version:     *version.(*string),
@@ -116,77 +113,10 @@ func loadAddons(ctx context.Context, bus EventBus.Bus) {
 func main() {
 	setup := flag.Bool("setup", false, "Install the database")
 	flag.Parse()
-	var log = logger.Logger()
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		panic("Error loading .env file")
 	}
-	database.Connect()
-	defer database.Close()
-
-	if *setup {
-		database.RunSetup()
-		return
-	}
-
-	background := context.Background()
-
-	bus := EventBus.New()
-
-	loadAddons(background, bus)
-
-	rows, err := app.Database().Query(background, "SELECT * FROM gb_bans")
-	fmt.Print(rows, err)
-
-	r := gin.Default()
-
-	r.GET("/admin/:id", func(c *gin.Context) {
-		id, err := strconv.ParseUint(c.Params.ByName("id"), 10, 64)
-		if err != nil {
-			c.JSON(400, gin.H{
-				"error": gin.H{
-					"message": "Invalid ID",
-				},
-			})
-		}
-		adm, err := admin.Find(background, uint(id))
-		if err != nil {
-			c.JSON(400, gin.H{
-				"error": gin.H{
-					"message": "Invalid ID",
-				},
-			})
-			return
-		}
-		bus.Publish("get:admin:id", adm)
-		c.JSON(200, gin.H{
-			"data": adm,
-		})
-	})
-
-	r.GET("/admin/:app/:id", func(c *gin.Context) {
-		app := c.Params.ByName("app")
-		id := c.Params.ByName("id")
-
-		adm, err := admin.FindByApp(background, bus, app, id)
-		if adm == nil || err != nil {
-			c.JSON(400, gin.H{
-				"error": gin.H{
-					"message": "Invalid ID",
-				},
-			})
-			return
-		}
-		c.JSON(200, gin.H{
-			"data": adm,
-		})
-	})
-
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-
-	r.Run(":8080")
+	app := gb.New(*setup)
+	app.Run()
 }
